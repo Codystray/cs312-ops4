@@ -6,8 +6,6 @@
 
 [Link to GitHub repository](https://github.com/Codystray/cs312-ops4)
 
-**Screen recording timestamps** (submit alongside the video):
-
 ---
 
 ## Table of Contents
