@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: minecraft-config
+data:
+  EULA: "TRUE"
+  VERSION: "1.21.1"
+  MEMORY: "1G"
+  MOTD: "strehloc's minecraft server"
+  ENABLE_RCON: "true"
+  RCON_PORT: "25575"

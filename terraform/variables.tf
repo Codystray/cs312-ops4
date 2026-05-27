@@ -10,9 +10,9 @@ variable "ssh_allowed_cidr" {
 }
 
 variable "instance_type" {
-  description = "EC2 instance type. t3.small (2 GiB) is the smallest size that runs k3s plus the JVM."
+  description = "EC2 instance type."
   type        = string
-  default     = "t3.small"
+  default     = "t3.medium"
 }
 
 variable "backup_bucket" {

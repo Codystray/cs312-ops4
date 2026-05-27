@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: minecraft
+  labels:
+    app: minecraft
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: minecraft
+  template:
+    metadata:
+      labels:
+        app: minecraft
+    spec:
+      containers:
+        - name: minecraft
+          image: 413777480403.dkr.ecr.us-east-1.amazonaws.com/ops3-minecraft-server:v1.0.0
+          ports:
+            - containerPort: 25565
+              name: minecraft
+            - containerPort: 25575
+              name: rcon
+          envFrom:
+            - configMapRef:
+                name: minecraft-config
+          env:
+            - name: RCON_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: minecraft-secret
+                  key: rcon-password
+          startupProbe:
+            tcpSocket:
+              port: 25565
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            failureThreshold: 30
+          readinessProbe:
+            tcpSocket:
+              port: 25565
+            periodSeconds: 10
+            failureThreshold: 3
+          livenessProbe:
+            tcpSocket:
+              port: 25565
+            periodSeconds: 20
+            failureThreshold: 3
+          resources:
+            requests:
+              memory: "1.25Gi"
+              cpu: "500m"
+            limits:
+              memory: "1.75Gi"
+              cpu: "1500m"
+          volumeMounts:
+            - name: world
+              mountPath: /data
+      volumes:
+        - name: world
+          persistentVolumeClaim:
+            claimName: minecraft-data
