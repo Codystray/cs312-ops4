@@ -1,0 +1,70 @@
+name: Build and Push Minecraft Image to ECR
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REPOSITORY: ops3-minecraft-server
+  UPSTREAM_IMAGE: itzg/minecraft-server:java21
+  MINECRAFT_VERSION: "1.21.1"
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Pull upstream Minecraft image
+        run: docker pull ${{ env.UPSTREAM_IMAGE }}
+
+      - name: Smoke test (wait for "Done" in logs)
+        run: |
+          docker run -d --name smoketest \
+            -e EULA=TRUE \
+            -e VERSION=${{ env.MINECRAFT_VERSION }} \
+            -e MEMORY=1G \
+            ${{ env.UPSTREAM_IMAGE }}
+
+          echo "Waiting up to 180 seconds for Minecraft server to start..."
+          for i in $(seq 1 18); do
+            sleep 10
+            if docker logs smoketest 2>&1 | grep -q 'Done ('; then
+              echo "Smoke test passed: server reached 'Done' state after $((i*10)) seconds."
+              docker logs smoketest 2>&1 | tail -5
+              docker stop smoketest
+              exit 0
+            fi
+            echo "  ...not ready yet (${i}0s elapsed)"
+          done
+
+          echo "Smoke test FAILED: 'Done' not seen after 180 seconds."
+          echo "--- container logs ---"
+          docker logs smoketest 2>&1 | tail -50
+          docker stop smoketest
+          exit 1
+
+      - name: Tag and push to ECR
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        run: |
+          docker tag ${{ env.UPSTREAM_IMAGE }} \
+            $ECR_REGISTRY/${{ env.ECR_REPOSITORY }}:${{ github.ref_name }}
+          docker push $ECR_REGISTRY/${{ env.ECR_REPOSITORY }}:${{ github.ref_name }}
+          echo "Pushed: $ECR_REGISTRY/${{ env.ECR_REPOSITORY }}:${{ github.ref_name }}"
