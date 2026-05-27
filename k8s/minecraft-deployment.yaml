@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
         - name: minecraft
-          image: 413777480403.dkr.ecr.us-east-1.amazonaws.com/ops3-minecraft-server:v1.0.0
+          image: <ECR_REGISTRY>/ops3-minecraft-server:v1.0.0
           ports:
             - containerPort: 25565
               name: minecraft
